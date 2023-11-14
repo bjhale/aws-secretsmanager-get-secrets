@@ -128,7 +128,7 @@ export async function getSecretValue(client: SecretsManagerClient, secretId: str
  * @param parseJsonSecrets: Indicates whether to deserialize JSON secrets
  * @param tempEnvName: If parsing JSON secrets, contains the current name for the env variable
  */
-export function injectSecret(secretName: string, secretValue: string, parseJsonSecrets: boolean, tempEnvName?: string): string[] {
+export function injectSecret(secretName: string, secretValue: string, parseJsonSecrets: boolean, tempEnvName?: string, unmaskedSecrets: string[] = []): string[] {
     let secretsToCleanup = [] as string[];
     if(parseJsonSecrets && isJSONString(secretValue)){
         // Recursively parses json secrets
@@ -139,7 +139,7 @@ export function injectSecret(secretName: string, secretValue: string, parseJsonS
 
             // Append the current key to the name of the env variable
             const newEnvName = `${tempEnvName || transformToValidEnvName(secretName)}_${transformToValidEnvName(k)}`;
-            secretsToCleanup = [...secretsToCleanup, ...injectSecret(secretName, keyValue, parseJsonSecrets, newEnvName)];
+            secretsToCleanup = [...secretsToCleanup, ...injectSecret(secretName, keyValue, parseJsonSecrets, newEnvName, unmaskedSecrets)];
         }
     } else {
         const envName = tempEnvName ? transformToValidEnvName(tempEnvName) : transformToValidEnvName(secretName);
@@ -150,7 +150,9 @@ export function injectSecret(secretName: string, secretValue: string, parseJsonS
         }
 
         // Inject a single secret
-        core.setSecret(secretValue);
+        if(unmaskedSecrets.length === 0 || (unmaskedSecrets.length > 0 && !unmaskedSecrets.includes(envName))) {
+            core.setSecret(secretValue);
+        }
 
         // Export variable
         core.debug(`Injecting secret ${secretName} as environment variable '${envName}'.`);

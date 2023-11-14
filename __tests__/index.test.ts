@@ -37,6 +37,7 @@ jest.mock('@actions/core', () => {
     return {
         getMultilineInput: jest.fn((name: string, options?: core.InputOptions) =>  [TEST_NAME, TEST_INPUT_3, TEST_ARN_INPUT] ),
         getBooleanInput: jest.fn((name: string, options?: core.InputOptions) => true),
+        getInput: jest.fn(),
         setFailed: jest.fn(),
         info: jest.fn(),
         debug: jest.fn(),
@@ -89,6 +90,7 @@ describe('Test main action', () => {
         await run();
         expect(core.exportVariable).toHaveBeenCalledTimes(7);
         expect(core.setFailed).not.toHaveBeenCalled();
+        expect(core.setSecret).toHaveBeenCalledTimes(6);
 
         // JSON secrets should be parsed
         expect(core.exportVariable).toHaveBeenCalledWith('TEST_ONE_USER', 'admin');

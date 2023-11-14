@@ -16,6 +16,7 @@ export async function run(): Promise<void> {
         const client : SecretsManagerClient = new SecretsManagerClient({region: process.env.AWS_DEFAULT_REGION, customUserAgent: "github-action"});
         const secretConfigInputs: string[] = [...new Set(core.getMultilineInput('secret-ids'))];
         const parseJsonSecrets = core.getBooleanInput('parse-json-secrets');
+        const unmaskedSecrets: string[] = (core.getInput('unmasked-secrets') ?? '').split(',').map(s => s.trim());
 
         // Get final list of secrets to request
         core.info('Building secrets list...');
@@ -41,7 +42,7 @@ export async function run(): Promise<void> {
                     secretAlias = isArn ? secretValueResponse.name : secretId;
                 }
 
-                const injectedSecrets = injectSecret(secretAlias, secretValueResponse.secretValue, parseJsonSecrets);
+                const injectedSecrets = injectSecret(secretAlias, secretValueResponse.secretValue, parseJsonSecrets, undefined, unmaskedSecrets);
                 secretsToCleanup = [...secretsToCleanup, ...injectedSecrets];
             } catch (err) {
                 // Fail action for any error
@@ -54,6 +55,7 @@ export async function run(): Promise<void> {
 
         core.info("Completed adding secrets.");
     } catch (error) {
+        console.log('failed:', error);
         if (error instanceof Error) core.setFailed(error.message)
     }
 }
